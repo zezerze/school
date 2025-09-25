@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Life Hub</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background:#f5f5f5;}
+  .tabs { display:flex; margin-bottom:10px; cursor:pointer; }
+  .tab { padding:10px 20px; background:#ddd; margin-right:5px; border-radius:5px; }
+  .tab.active { background:#4CAF50; color:white; }
+  .content { display:none; padding:10px; background:white; border-radius:5px; }
+  .content.active { display:block; }
+  input, button { margin:5px 0; padding:5px; }
+  ul { list-style:none; padding-left:0; }
+  li { background:#eee; margin:3px 0; padding:5px; border-radius:3px;}
+</style>
+</head>
+<body>
+
+<h1>School Life Hub</h1>
+<div class="tabs">
+  <div class="tab active" data-tab="homework">Homework</div>
+  <div class="tab" data-tab="grades">Grades</div>
+  <div class="tab" data-tab="notes">Notes</div>
+  <div class="tab" data-tab="lab">Lab Data</div>
+  <div class="tab" data-tab="projects">Group Projects</div>
+</div>
+
+<!-- Homework -->
+<div class="content active" id="homework">
+  <input type="text" id="hwName" placeholder="Assignment Name">
+  <input type="text" id="hwDue" placeholder="Due Date">
+  <button onclick="addHomework()">Add Assignment</button>
+  <ul id="hwList"></ul>
+</div>
+
+<!-- Grades -->
+<div class="content" id="grades">
+  <input type="number" id="gradeInput" placeholder="Enter grade">
+  <button onclick="addGrade()">Add Grade</button>
+  <ul id="gradeList"></ul>
+  <p id="avgGrade">Average: 0</p>
+</div>
+
+<!-- Notes -->
+<div class="content" id="notes">
+  <input type="text" id="noteInput" placeholder="Add note">
+  <button onclick="addNote()">Add Note</button>
+  <input type="text" id="noteSearch" placeholder="Search notes" oninput="searchNotes()">
+  <ul id="noteList"></ul>
+</div>
+
+<!-- Lab Data -->
+<div class="content" id="lab">
+  <input type="number" id="labInput" placeholder="Enter data point">
+  <button onclick="addLabData()">Add Data</button>
+  <ul id="labList"></ul>
+  <p id="labMean">Mean: 0</p>
+</div>
+
+<!-- Group Projects -->
+<div class="content" id="projects">
+  <input type="text" id="memberInput" placeholder="Add member">
+  <button onclick="addMember()">Add Member</button>
+  <ul id="memberList"></ul>
+  <input type="text" id="taskInput" placeholder="Add task">
+  <button onclick="addTask()">Add Task</button>
+  <ul id="taskList"></ul>
+</div>
+
+<script>
+const tabs = document.querySelectorAll('.tab');
+const contents = document.querySelectorAll('.content');
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+// Helper to save/load localStorage
+function saveData(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
+function loadData(key){ return JSON.parse(localStorage.getItem(key)) || []; }
+
+// ----- Homework -----
+let hwList = loadData('homework');
+function renderHomework(){ 
+  const ul = document.getElementById('hwList'); 
+  ul.innerHTML = ''; 
+  hwList.forEach(hw=>{
+    let li=document.createElement('li'); li.textContent = hw; ul.appendChild(li);
+  });
+}
+function addHomework(){
+  const name = document.getElementById('hwName').value;
+  const due = document.getElementById('hwDue').value;
+  if(name && due){
+    hwList.push(`${name} - due: ${due}`);
+    saveData('homework', hwList);
+    renderHomework();
+    document.getElementById('hwName').value='';
+    document.getElementById('hwDue').value='';
+  }
+}
+renderHomework();
+
+// ----- Grades -----
+let grades = loadData('grades');
+function renderGrades(){
+  const ul = document.getElementById('gradeList');
+  ul.innerHTML='';
+  grades.forEach((g,i)=>{
+    let li=document.createElement('li'); li.textContent=`Grade ${i+1}: ${g}`; ul.appendChild(li);
+  });
+  const avg = grades.reduce((a,b)=>a+b,0)/grades.length || 0;
+  document.getElementById('avgGrade').textContent = `Average: ${avg.toFixed(2)}`;
+}
+function addGrade(){
+  const g = parseFloat(document.getElementById('gradeInput').value);
+  if(!isNaN(g)){ grades.push(g); saveData('grades',grades); renderGrades(); document.getElementById('gradeInput').value=''; }
+}
+renderGrades();
+
+// ----- Notes -----
+let notes = loadData('notes');
+function renderNotes(list){ 
+  const ul=document.getElementById('noteList'); ul.innerHTML=''; 
+  list.forEach(n=>{ let li=document.createElement('li'); li.textContent=n; ul.appendChild(li); });
+}
+function addNote(){ 
+  const note=document.getElementById('noteInput').value; 
+  if(note){ notes.push(note); saveData('notes',notes); renderNotes(notes); document.getElementById('noteInput').value=''; }
+}
+function searchNotes(){ 
+  const q=document.getElementById('noteSearch').value.toLowerCase(); 
+  renderNotes(notes.filter(n=>n.toLowerCase().includes(q))); 
+}
+renderNotes(notes);
+
+// ----- Lab Data -----
+let labData = loadData('labData');
+function renderLab(){ 
+  const ul=document.getElementById('labList'); ul.innerHTML='';
+  labData.forEach((d,i)=>{ let li=document.createElement('li'); li.textContent=`Data ${i+1}: ${d}`; ul.appendChild(li); });
+  const mean = labData.reduce((a,b)=>a+b,0)/labData.length || 0;
+  document.getElementById('labMean').textContent=`Mean: ${mean.toFixed(2)}`;
+}
+function addLabData(){ 
+  const val=parseFloat(document.getElementById('labInput').value);
+  if(!isNaN(val)){ labData.push(val); saveData('labData',labData); renderLab(); document.getElementById('labInput').value=''; }
+}
+renderLab();
+
+// ----- Group Projects -----
+let members = loadData('members');
+let tasks = loadData('tasks');
+function renderList(id, list){ const ul=document.getElementById(id); ul.innerHTML=''; list.forEach(item=>{ let li=document.createElement('li'); li.textContent=item; ul.appendChild(li); });}
+function addMember(){ const m=document.getElementById('memberInput').value; if(m){ members.push(m); saveData('members',members); renderList('memberList',members); document.getElementById('memberInput').value='';}}
+function addTask(){ const t=document.getElementById('taskInput').value; if(t){ tasks.push(t); saveData('tasks',tasks); renderList('taskList',tasks); document.getElementById('taskInput').value='';}}
+renderList('memberList', members);
+renderList('taskList', tasks);
+
+</script>
+</body>
+</html>
