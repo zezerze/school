@@ -3,41 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>School Life Hub</title>
+<title>Schooler</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg-dark: #1e1e2f;
+    --bg-light: #f5f5f5;
+    --text-dark: #f5f5f5;
+    --text-light: #1e1e2f;
+    --accent: #ffcc00;
+    --card-dark: #2a2a40;
+    --card-light: #e0e0e0;
+    --card-hover-dark: #3a3a5a;
+    --card-hover-light: #d5d5d5;
+  }
   body {
     font-family: 'Poppins', sans-serif;
     margin: 0;
     padding: 0;
-    background: #1e1e2f;
-    color: #f5f5f5;
+    background: var(--bg-dark);
+    color: var(--text-dark);
+    transition: background 0.3s, color 0.3s;
   }
-  h1 { text-align:center; margin:20px 0; color:#ffcc00; }
-  .tabs { display:flex; justify-content:center; gap:10px; margin-bottom:20px; }
+  h1 { text-align:center; margin:20px 0; color: var(--accent); }
+  .tabs { display:flex; justify-content:center; gap:10px; margin-bottom:20px; flex-wrap: wrap; }
   .tab {
     padding:10px 20px;
     border-radius: 10px;
     background:#33334d;
     cursor:pointer;
-    transition: 0.2s;
     font-weight:600;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
   }
-  .tab:hover { background:#444466; }
-  .tab.active { background:#ffcc00; color:#1e1e2f; box-shadow:0 0 10px #ffcc00; }
-  .content { display:none; max-width:600px; margin:0 auto; }
-  .content.active { display:block; }
+  .tab.active { background: var(--accent); color: var(--text-dark); }
+  .tab::after {
+    content: '';
+    position: absolute;
+    left: -100%;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.1);
+    transition: left 0.3s;
+  }
+  .tab.active::after { left: 0; }
+  .content { display:none; max-width:600px; margin:0 auto; padding:0 10px; opacity:0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s;}
+  .content.active { display:block; opacity:1; transform: translateY(0);}
   .card {
-    background:#2a2a40;
+    background: var(--card-dark);
     padding:15px;
     margin:10px 0;
     border-radius:10px;
     display:flex;
     justify-content: space-between;
     align-items:center;
-    transition:0.2s;
+    transition:0.3s, background 0.3s;
   }
-  .card:hover { background:#3a3a5a; }
+  .card:hover { background: var(--card-hover-dark); }
   input, button {
     padding:8px;
     margin:5px 0;
@@ -47,8 +71,8 @@
   }
   input { width:60%; }
   button {
-    background:#ffcc00;
-    color:#1e1e2f;
+    background: var(--accent);
+    color: #1e1e2f;
     cursor:pointer;
     font-weight:600;
     transition:0.2s;
@@ -56,11 +80,17 @@
   button:hover { background:#e6b800; }
   ul { list-style:none; padding-left:0; }
   li { margin:3px 0; }
+  .toggle-container { display:flex; justify-content:center; margin-bottom:10px; gap:10px; }
 </style>
 </head>
 <body>
 
-<h1>School Life Hub</h1>
+<h1>Schooler</h1>
+
+<div class="toggle-container">
+  <button onclick="setMode('light')">Light Mode</button>
+  <button onclick="setMode('dark')">Dark Mode</button>
+</div>
 
 <div class="tabs">
   <div class="tab active" data-tab="homework">Homework</div>
@@ -120,9 +150,23 @@ tabs.forEach(tab => {
     tabs.forEach(t => t.classList.remove('active'));
     contents.forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
-    document.getElementById(tab.dataset.tab).classList.add('active');
+    const content = document.getElementById(tab.dataset.tab);
+    content.classList.add('active');
   });
 });
+
+// Mode toggle
+function setMode(mode){
+  if(mode==='light'){
+    document.body.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-light');
+    document.body.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text-light');
+    document.querySelectorAll('.card').forEach(c=>{ c.style.background=getComputedStyle(document.documentElement).getPropertyValue('--card-light'); c.style.color='black'; });
+  }else{
+    document.body.style.background = getComputedStyle(document.documentElement).getPropertyValue('--bg-dark');
+    document.body.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text-dark');
+    document.querySelectorAll('.card').forEach(c=>{ c.style.background=getComputedStyle(document.documentElement).getPropertyValue('--card-dark'); c.style.color='white'; });
+  }
+}
 
 // Helper functions for localStorage
 function saveData(key,data){ localStorage.setItem(key, JSON.stringify(data)); }
