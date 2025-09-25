@@ -4,21 +4,64 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>School Life Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  body { font-family: Arial, sans-serif; padding: 20px; background:#f5f5f5;}
-  .tabs { display:flex; margin-bottom:10px; cursor:pointer; }
-  .tab { padding:10px 20px; background:#ddd; margin-right:5px; border-radius:5px; }
-  .tab.active { background:#4CAF50; color:white; }
-  .content { display:none; padding:10px; background:white; border-radius:5px; }
+  body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #1e1e2f;
+    color: #f5f5f5;
+  }
+  h1 { text-align:center; margin:20px 0; color:#ffcc00; }
+  .tabs { display:flex; justify-content:center; gap:10px; margin-bottom:20px; }
+  .tab {
+    padding:10px 20px;
+    border-radius: 10px;
+    background:#33334d;
+    cursor:pointer;
+    transition: 0.2s;
+    font-weight:600;
+  }
+  .tab:hover { background:#444466; }
+  .tab.active { background:#ffcc00; color:#1e1e2f; box-shadow:0 0 10px #ffcc00; }
+  .content { display:none; max-width:600px; margin:0 auto; }
   .content.active { display:block; }
-  input, button { margin:5px 0; padding:5px; }
+  .card {
+    background:#2a2a40;
+    padding:15px;
+    margin:10px 0;
+    border-radius:10px;
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    transition:0.2s;
+  }
+  .card:hover { background:#3a3a5a; }
+  input, button {
+    padding:8px;
+    margin:5px 0;
+    border-radius:5px;
+    border:none;
+    font-family:'Poppins';
+  }
+  input { width:60%; }
+  button {
+    background:#ffcc00;
+    color:#1e1e2f;
+    cursor:pointer;
+    font-weight:600;
+    transition:0.2s;
+  }
+  button:hover { background:#e6b800; }
   ul { list-style:none; padding-left:0; }
-  li { background:#eee; margin:3px 0; padding:5px; border-radius:3px;}
+  li { margin:3px 0; }
 </style>
 </head>
 <body>
 
 <h1>School Life Hub</h1>
+
 <div class="tabs">
   <div class="tab active" data-tab="homework">Homework</div>
   <div class="tab" data-tab="grades">Grades</div>
@@ -81,8 +124,8 @@ tabs.forEach(tab => {
   });
 });
 
-// Helper to save/load localStorage
-function saveData(key, data){ localStorage.setItem(key, JSON.stringify(data)); }
+// Helper functions for localStorage
+function saveData(key,data){ localStorage.setItem(key, JSON.stringify(data)); }
 function loadData(key){ return JSON.parse(localStorage.getItem(key)) || []; }
 
 // ----- Homework -----
@@ -90,8 +133,14 @@ let hwList = loadData('homework');
 function renderHomework(){ 
   const ul = document.getElementById('hwList'); 
   ul.innerHTML = ''; 
-  hwList.forEach(hw=>{
-    let li=document.createElement('li'); li.textContent = hw; ul.appendChild(li);
+  hwList.forEach((hw,i)=>{
+    let li=document.createElement('li');
+    let card=document.createElement('div'); card.className='card';
+    card.textContent=hw;
+    let remove=document.createElement('button'); remove.textContent='Remove';
+    remove.onclick=()=>{ hwList.splice(i,1); saveData('homework',hwList); renderHomework(); }
+    card.appendChild(remove);
+    ul.appendChild(card);
   });
 }
 function addHomework(){
@@ -110,10 +159,15 @@ renderHomework();
 // ----- Grades -----
 let grades = loadData('grades');
 function renderGrades(){
-  const ul = document.getElementById('gradeList');
-  ul.innerHTML='';
+  const ul = document.getElementById('gradeList'); ul.innerHTML='';
   grades.forEach((g,i)=>{
-    let li=document.createElement('li'); li.textContent=`Grade ${i+1}: ${g}`; ul.appendChild(li);
+    let li=document.createElement('li');
+    let card=document.createElement('div'); card.className='card';
+    card.textContent=`Grade ${i+1}: ${g}`;
+    let remove=document.createElement('button'); remove.textContent='Remove';
+    remove.onclick=()=>{ grades.splice(i,1); saveData('grades',grades); renderGrades(); }
+    card.appendChild(remove);
+    ul.appendChild(card);
   });
   const avg = grades.reduce((a,b)=>a+b,0)/grades.length || 0;
   document.getElementById('avgGrade').textContent = `Average: ${avg.toFixed(2)}`;
@@ -128,7 +182,15 @@ renderGrades();
 let notes = loadData('notes');
 function renderNotes(list){ 
   const ul=document.getElementById('noteList'); ul.innerHTML=''; 
-  list.forEach(n=>{ let li=document.createElement('li'); li.textContent=n; ul.appendChild(li); });
+  list.forEach((n,i)=>{ 
+    let li=document.createElement('li'); 
+    let card=document.createElement('div'); card.className='card';
+    card.textContent=n;
+    let remove=document.createElement('button'); remove.textContent='Remove';
+    remove.onclick=()=>{ notes.splice(i,1); saveData('notes',notes); renderNotes(notes); }
+    card.appendChild(remove);
+    ul.appendChild(card);
+  });
 }
 function addNote(){ 
   const note=document.getElementById('noteInput').value; 
@@ -144,7 +206,15 @@ renderNotes(notes);
 let labData = loadData('labData');
 function renderLab(){ 
   const ul=document.getElementById('labList'); ul.innerHTML='';
-  labData.forEach((d,i)=>{ let li=document.createElement('li'); li.textContent=`Data ${i+1}: ${d}`; ul.appendChild(li); });
+  labData.forEach((d,i)=>{
+    let li=document.createElement('li');
+    let card=document.createElement('div'); card.className='card';
+    card.textContent=`Data ${i+1}: ${d}`;
+    let remove=document.createElement('button'); remove.textContent='Remove';
+    remove.onclick=()=>{ labData.splice(i,1); saveData('labData',labData); renderLab(); }
+    card.appendChild(remove);
+    ul.appendChild(card);
+  });
   const mean = labData.reduce((a,b)=>a+b,0)/labData.length || 0;
   document.getElementById('labMean').textContent=`Mean: ${mean.toFixed(2)}`;
 }
@@ -157,7 +227,14 @@ renderLab();
 // ----- Group Projects -----
 let members = loadData('members');
 let tasks = loadData('tasks');
-function renderList(id, list){ const ul=document.getElementById(id); ul.innerHTML=''; list.forEach(item=>{ let li=document.createElement('li'); li.textContent=item; ul.appendChild(li); });}
+function renderList(id, list){ const ul=document.getElementById(id); ul.innerHTML=''; list.forEach((item,i)=>{ 
+  let card=document.createElement('div'); card.className='card';
+  card.textContent=item;
+  let remove=document.createElement('button'); remove.textContent='Remove';
+  remove.onclick=()=>{ list.splice(i,1); saveData(id==='memberList'?'members':'tasks',list); renderList(id,list); }
+  card.appendChild(remove);
+  ul.appendChild(card);
+});}
 function addMember(){ const m=document.getElementById('memberInput').value; if(m){ members.push(m); saveData('members',members); renderList('memberList',members); document.getElementById('memberInput').value='';}}
 function addTask(){ const t=document.getElementById('taskInput').value; if(t){ tasks.push(t); saveData('tasks',tasks); renderList('taskList',tasks); document.getElementById('taskInput').value='';}}
 renderList('memberList', members);
