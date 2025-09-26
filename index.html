@@ -1,238 +1,232 @@
-import React, { useState, useEffect } from "react";
-import CryptoJS from "crypto-js";
-
-export default function App() {
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem("users");
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [currentUser, setCurrentUser] = useState(
-    localStorage.getItem("currentUser") || null
-  );
-  const [showAuth, setShowAuth] = useState(!currentUser);
-  const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ username: "", password: "" });
-
-  const [tasks, setTasks] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [critiqueInput, setCritiqueInput] = useState("");
-  const [critiqueOutput, setCritiqueOutput] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem("users", JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    if (currentUser) localStorage.setItem("currentUser", currentUser);
-  }, [currentUser]);
-
-  const hashPass = (pw) => CryptoJS.SHA256(pw).toString();
-
-  const handleAuth = () => {
-    const { username, password } = authForm;
-    if (!username || !password) return alert("fill all fields fam");
-    const hashed = hashPass(password);
-
-    if (authMode === "signup") {
-      if (users[username]) return alert("user already exists");
-      const newUsers = {
-        ...users,
-        [username]: { password: hashed, points: 0 },
-      };
-      setUsers(newUsers);
-      setCurrentUser(username);
-      setShowAuth(false);
-    } else {
-      if (!users[username]) return alert("user not found");
-      if (users[username].password !== hashed)
-        return alert("wrong password");
-      setCurrentUser(username);
-      setShowAuth(false);
-    }
-  };
-
-  const logout = () => {
-    setCurrentUser(null);
-    setShowAuth(true);
-  };
-
-  const addTask = (task) => {
-    setTasks([...tasks, task]);
-  };
-
-  const completeTask = (index) => {
-    const newTasks = [...tasks];
-    newTasks.splice(index, 1);
-    setTasks(newTasks);
-    setUsers({
-      ...users,
-      [currentUser]: {
-        ...users[currentUser],
-        points: users[currentUser].points + 10,
-      },
-    });
-  };
-
-  const addGrade = (val) => {
-    setGrades([...grades, val]);
-  };
-
-  const avgGrade =
-    grades.length > 0
-      ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(2)
-      : 0;
-
-  const getCritique = async () => {
-    const API_KEY = "YOUR_OPENAI_API_KEY"; // replace with ur key
-    try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: "You are a helpful study critique AI." },
-            { role: "user", content: critiqueInput },
-          ],
-        }),
-      });
-      const data = await res.json();
-      setCritiqueOutput(data.choices[0].message.content);
-    } catch (err) {
-      console.error(err);
-      setCritiqueOutput("error talking to ai");
-    }
-  };
-
-  return (
-    <div className="p-4">
-      {showAuth && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-80">
-            <h2 className="text-lg mb-2">{authMode === "login" ? "Log in" : "Sign up"}</h2>
-            <input
-              placeholder="username"
-              className="border p-2 w-full mb-2"
-              value={authForm.username}
-              onChange={(e) =>
-                setAuthForm({ ...authForm, username: e.target.value })
-              }
-            />
-            <input
-              placeholder="password"
-              type="password"
-              className="border p-2 w-full mb-2"
-              value={authForm.password}
-              onChange={(e) =>
-                setAuthForm({ ...authForm, password: e.target.value })
-              }
-            />
-            <button
-              onClick={handleAuth}
-              className="bg-blue-500 text-white px-3 py-1 rounded w-full"
-            >
-              {authMode === "login" ? "Login" : "Sign up"}
-            </button>
-            <p
-              className="mt-2 text-sm text-blue-600 cursor-pointer"
-              onClick={() =>
-                setAuthMode(authMode === "login" ? "signup" : "login")
-              }
-            >
-              {authMode === "login"
-                ? "don’t have an account? sign up"
-                : "already got one? log in"}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {currentUser && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl">welcome {currentUser} 👋</h1>
-            <button
-              onClick={logout}
-              className="bg-red-500 text-white px-3 py-1 rounded"
-            >
-              logout
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
-              <h2 className="text-xl">Tasks</h2>
-              <button
-                onClick={() => addTask("new task")}
-                className="bg-green-500 text-white px-3 py-1 rounded"
-              >
-                Add Task
-              </button>
-              <ul>
-                {tasks.map((t, i) => (
-                  <li key={i} className="flex justify-between items-center">
-                    {t}
-                    <div>
-                      <button
-                        onClick={() => completeTask(i)}
-                        className="bg-blue-500 text-white px-2 py-1 mr-2 rounded"
-                      >
-                        Complete
-                      </button>
-                      <button
-                        onClick={() =>
-                          setTasks(tasks.filter((_, idx) => idx !== i))
-                        }
-                        className="bg-red-500 text-white px-2 py-1 rounded"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <h2 className="text-xl mt-6">Grades (avg: {avgGrade})</h2>
-              <button
-                onClick={() => addGrade(Math.floor(Math.random() * 100))}
-                className="bg-purple-500 text-white px-3 py-1 rounded"
-              >
-                Add Random Grade
-              </button>
-
-              <h2 className="text-xl mt-6">Critique</h2>
-              <textarea
-                className="border p-2 w-full mb-2"
-                value={critiqueInput}
-                onChange={(e) => setCritiqueInput(e.target.value)}
-              />
-              <button
-                onClick={getCritique}
-                className="bg-indigo-500 text-white px-3 py-1 rounded"
-              >
-                Get Critique
-              </button>
-              <p className="mt-2 whitespace-pre-line">{critiqueOutput}</p>
-            </div>
-
-            <div>
-              <h2 className="text-xl mb-2">Leaderboard</h2>
-              <ul>
-                {Object.entries(users)
-                  .sort((a, b) => b[1].points - a[1].points)
-                  .map(([u, data], i) => (
-                    <li key={u} className="mb-1">
-                      {i + 1}. {u} – {data.points} pts
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Textbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark:#1f1f2e;--bg-light:#fafafa;
+  --text-dark:#eaeaea;--text-light:#1f1f2e;
+  --accent-dark:#b39ddb;--accent-light:#7986cb;
+  --card-dark:#2b2b3f;--card-light:#e8eaf6;
+  --card-hover-dark:#3a3a5a;--card-hover-light:#d5d5e5;
 }
+body{font-family:'Poppins',sans-serif;margin:0;padding:0;transition:.3s}
+h1{text-align:center;margin:20px 0}
+#tabDescription{text-align:center;margin-bottom:20px;font-size:14px;font-weight:500;opacity:0;transform:translateY(20px);transition:.3s}
+.tabs{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.tab{padding:10px 20px;border-radius:10px;cursor:pointer;font-weight:600;transition:.3s}
+.tab:hover{transform:scale(1.05)}
+.tab.active{box-shadow:0 0 10px var(--accent-dark)}
+.content{max-width:600px;margin:0 auto;padding:10px;opacity:0;transform:translateY(20px);transition:.3s;display:none}
+.content.active{display:block;opacity:1;transform:translateY(0)}
+.card{background:var(--card-dark);padding:15px;margin:10px 0;border-radius:10px;display:flex;justify-content:space-between;align-items:center;transition:.3s}
+.card:hover{background:var(--card-hover-dark)}
+input,button,select{padding:8px;margin:8px 0;border-radius:5px;border:none;font-family:'Poppins'}
+input,select{width:60%}
+button{cursor:pointer;font-weight:600;transition:.2s}
+ul{list-style:none;padding:0}
+li{margin:3px 0}
+.theme-selector{position:fixed;bottom:15px;right:15px;z-index:100}
+#themeBtn{padding:10px 15px;border-radius:10px;border:none;cursor:pointer;font-weight:600;background:var(--accent-dark);color:#fff;transition:.3s}
+#themeBtn:hover{transform:scale(1.1)}
+.dropdown-content{display:none;position:absolute;bottom:50px;right:0;background:var(--card-dark);border-radius:10px;overflow:hidden;transition:.3s;max-height:0;opacity:0}
+.dropdown-content div{padding:10px;cursor:pointer;transition:.2s}
+.dropdown-content div:hover{background:var(--card-hover-dark)}
+.dropdown-content.show{display:block;max-height:500px;opacity:1}
+
+/* Dark & light mode */
+body.dark-mode{background:var(--bg-dark);color:var(--text-dark)}
+body.dark-mode h1{color:var(--accent-dark)}
+body.dark-mode .tab{background:#33334d;color:var(--text-dark)}
+body.dark-mode .tab.active{background:var(--accent-dark);color:#1f1f2e;box-shadow:0 0 10px var(--accent-dark)}
+body.dark-mode .card{background:var(--card-dark);color:#fff}
+body.dark-mode .card:hover{background:var(--card-hover-dark)}
+body.dark-mode button{background:var(--accent-dark);color:#1f1f2e}
+body.light-mode{background:var(--bg-light);color:var(--text-light)}
+body.light-mode h1{color:var(--accent-light)}
+body.light-mode .tab{background:#d0d0d0;color:var(--text-light)}
+body.light-mode .tab.active{background:var(--accent-light);color:#fff;box-shadow:0 0 10px var(--accent-light)}
+body.light-mode .card{background:var(--card-light);color:#000}
+body.light-mode .card:hover{background:var(--card-hover-light)}
+body.light-mode button{background:var(--accent-light);color:#fff}
+
+/* spacing fixes */
+input + button, select + button {margin-left:8px;}
+input, select {margin-bottom:10px;}
+
+/* Leaderboard */
+#leaderboard {position:fixed;top:15px;right:15px;width:220px;padding:10px;border-radius:10px;z-index:99}
+#leaderboard h3 {margin-top:0;text-align:center}
+#leaderboard .user-entry {display:flex;justify-content:space-between;margin:3px 0}
+
+/* Modal */
+#authModal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:200}
+#authBox {background:var(--card-dark);padding:20px;border-radius:10px;width:300px}
+#authBox h3{text-align:center;margin-top:0}
+#authBox input{width:90%}
+</style>
+</head>
+<body class="dark-mode">
+
+<h1>Textbook</h1>
+<div id="tabDescription"></div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="homework">Homework</div>
+  <div class="tab" data-tab="grades">Grades</div>
+  <div class="tab" data-tab="notes">Notes</div>
+  <div class="tab" data-tab="critique">Critique</div>
+  <div class="tab" data-tab="projects">Group Projects</div>
+</div>
+
+<div class="content active" id="homework">
+  <input id="hwName" placeholder="Assignment Name">
+  <input id="hwDue" placeholder="Due Date">
+  <button onclick="addHW()">Add Assignment</button>
+  <ul id="hwList"></ul>
+</div>
+
+<div class="content" id="grades">
+  <input id="gradeSubject" placeholder="Subject">
+  <input type="number" id="gradeInput" placeholder="Grade">
+  <button onclick="addGrade()">Add Grade</button>
+  <ul id="gradeList"></ul>
+  <p id="avgGrade"></p>
+</div>
+
+<div class="content" id="notes">
+  <input id="noteInput" placeholder="Add note">
+  <button onclick="addNote()">Add</button>
+  <input id="noteSearch" placeholder="Search notes" oninput="searchNotes()">
+  <ul id="noteList"></ul>
+</div>
+
+<div class="content" id="critique">
+  <input id="critInput" placeholder="Enter text for critique">
+  <button onclick="addCrit()">Get Critique</button>
+  <ul id="critList"></ul>
+</div>
+
+<div class="content" id="projects">
+  <input id="memberInput" placeholder="Add member">
+  <button onclick="addMember()">Add</button>
+  <ul id="memberList"></ul>
+  <input id="taskInput" placeholder="Add task">
+  <select id="memberAssign"></select>
+  <button onclick="addTask()">Add Task</button>
+  <ul id="taskList"></ul>
+</div>
+
+<!-- Leaderboard -->
+<div id="leaderboard" class="card">
+  <h3>Leaderboard</h3>
+  <div id="leaderboardList"></div>
+  <p id="currentUserInfo">Not signed in</p>
+  <button onclick="openAuthModal()">Login / Signup</button>
+  <button onclick="logout()" style="display:none" id="logoutBtn">Logout</button>
+</div>
+
+<!-- Theme selector -->
+<div class="theme-selector">
+  <button id="themeBtn">🎨</button>
+  <div id="themeDropdown" class="dropdown-content">
+    <div onclick="setTheme('subtle')">Subtle</div>
+    <div onclick="setTheme('ocean')">Ocean</div>
+    <div onclick="setTheme('sunset')">Sunset</div>
+    <div onclick="setTheme('forest')">Forest</div>
+    <div onclick="setTheme('tech')">Tech Blue</div>
+    <div onclick="setTheme('rose')">Rose</div>
+    <div onclick="setTheme('mint')">Mint</div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div id="authModal">
+  <div id="authBox" class="card">
+    <h3 id="authTitle">Login</h3>
+    <input id="authUser" placeholder="Username"><br>
+    <input id="authPass" type="password" placeholder="Password"><br>
+    <button onclick="handleAuth()">Submit</button>
+    <button onclick="toggleAuthMode()">Switch to Signup</button>
+  </div>
+</div>
+
+<script>
+// simple sha256
+async function sha256(str){const buf=new TextEncoder().encode(str);const hash=await crypto.subtle.digest("SHA-256",buf);return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");}
+
+// Local helpers
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function load(k){return JSON.parse(localStorage.getItem(k)||'[]')}
+
+// Tabs
+const tabs=document.querySelectorAll('.tab'),contents=document.querySelectorAll('.content');
+const descs={homework:"Track assignments",grades:"Add grades",notes:"Write notes",critique:"AI critique",projects:"Manage members"};
+const desc=document.getElementById('tabDescription');
+tabs.forEach(t=>t.addEventListener('click',()=>{
+  tabs.forEach(x=>x.classList.remove('active'));
+  contents.forEach(c=>{c.classList.remove('active');c.style.opacity=0;c.style.transform="translateY(20px)"});
+  t.classList.add('active');
+  const c=document.getElementById(t.dataset.tab);
+  c.classList.add('active');
+  setTimeout(()=>{c.style.opacity=1;c.style.transform="translateY(0)"},50);
+  desc.style.opacity=0;
+  setTimeout(()=>{desc.textContent=descs[t.dataset.tab];desc.style.opacity=1;desc.style.transform="translateY(0)"},200);
+}));
+desc.textContent=descs.homework;desc.style.opacity=1;desc.style.transform="translateY(0)";
+
+// Homework
+let hw=load('hw');
+function renderHW(){const ul=document.getElementById('hwList');ul.innerHTML='';hw.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.textContent=v;const rm=document.createElement('button');rm.textContent='Remove';rm.onclick=()=>{hw.splice(i,1);save('hw',hw);renderHW()};const comp=document.createElement('button');comp.textContent='Complete';comp.onclick=()=>{addPoints(10);hw.splice(i,1);save('hw',hw);renderHW()};c.appendChild(rm);c.appendChild(comp);ul.appendChild(c)})}
+function addHW(){const n=document.getElementById('hwName').value,d=document.getElementById('hwDue').value;if(n&&d){hw.push(`${n} - ${d}`);save('hw',hw);renderHW();document.getElementById('hwName').value=document.getElementById('hwDue').value=''}}
+renderHW()
+
+// Grades
+let grades=load('grades');
+function renderGrades(){const ul=document.getElementById('gradeList');ul.innerHTML='';grades.forEach((g,i)=>{const c=document.createElement('div');c.className='card';c.textContent=`${g.sub}:${g.val}`;const b=document.createElement('button');b.textContent='Remove';b.onclick=()=>{grades.splice(i,1);save('grades',grades);renderGrades()};c.appendChild(b);ul.appendChild(c)});let avg=grades.length?grades.reduce((a,b)=>a+b.val,0)/grades.length:0;document.getElementById('avgGrade').textContent=`Avg: ${avg.toFixed(2)}`}
+function addGrade(){const s=document.getElementById('gradeSubject').value,v=parseFloat(document.getElementById('gradeInput').value);if(s&&!isNaN(v)){grades.push({sub:s,val:v});save('grades',grades);renderGrades();document.getElementById('gradeSubject').value=document.getElementById('gradeInput').value=''}}
+renderGrades()
+
+// Notes
+let notes=load('notes');
+function renderNotes(l){const ul=document.getElementById('noteList');ul.innerHTML='';l.forEach((n,i)=>{const c=document.createElement('div');c.className='card';c.textContent=n;const b=document.createElement('button');b.textContent='Remove';b.onclick=()=>{notes.splice(i,1);save('notes',notes);renderNotes(notes)};c.appendChild(b);ul.appendChild(c)})}
+function addNote(){const v=document.getElementById('noteInput').value.trim();if(v){notes.push(v);save('notes',notes);document.getElementById('noteInput').value='';renderNotes(notes)}}
+function searchNotes(){const q=document.getElementById('noteSearch').value.toLowerCase();renderNotes(notes.filter(n=>n.toLowerCase().includes(q)))}
+renderNotes(notes)
+
+// Critique (AI)
+let cr=load('cr');
+async function aiCritique(text){const API_KEY="PUT-YOUR-OPENAI-KEY-HERE";try{const res=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+API_KEY},body:JSON.stringify({model:"gpt-4o-mini",messages:[{role:"system",content:"You are a helpful study critique AI"},{role:"user",content:text}]})});const data=await res.json();return data.choices[0].message.content}catch(e){return "error contacting AI"}}
+function renderCrit(){const ul=document.getElementById('critList');ul.innerHTML='';cr.forEach((t,i)=>{const li=document.createElement('li');li.innerHTML=`<div>${t.input}</div><pre style="color:#aaa;font-size:12px;">${t.out}</pre>`;const b=document.createElement('button');b.textContent='Remove';b.onclick=()=>{cr.splice(i,1);save('cr',cr);renderCrit()};li.appendChild(b);ul.appendChild(li)})}
+async function addCrit(){const v=document.getElementById('critInput').value.trim();if(!v)return;const out=await aiCritique(v);cr.push({input:v,out});save('cr',cr);document.getElementById('critInput').value='';renderCrit()}
+renderCrit()
+
+// Projects
+let members=load('members'),tasks=load('tasks');
+const sel=document.getElementById('memberAssign');sel.style.width='60%';
+function updateSelect(){sel.innerHTML='';members.forEach(m=>{const o=document.createElement('option');o.value=o.textContent=m;sel.appendChild(o)})}
+function renderList(id,l){const ul=document.getElementById(id);ul.innerHTML='';l.forEach((v,i)=>{const c=document.createElement('div');c.className='card';c.textContent=v;const rm=document.createElement('button');rm.textContent='Remove';rm.onclick=()=>{l.splice(i,1);save(id==='memberList'?'members':'tasks',l);renderList(id,l);updateSelect()};const comp=document.createElement('button');comp.textContent='Complete';comp.onclick=()=>{addPoints(5);l.splice(i,1);save(id==='memberList'?'members':'tasks',l);renderList(id,l);updateSelect()};c.appendChild(rm);c.appendChild(comp);ul.appendChild(c)})}
+function addMember(){const v=document.getElementById('memberInput').value.trim();if(!v)return;members.push(v);save('members',members);document.getElementById('memberInput').value='';renderList('memberList',members);updateSelect()}
+function addTask(){const v=document.getElementById('taskInput').value.trim(),m=sel.value;if(!v||!m)return;tasks.push(`${v} - ${m}`);save('tasks',tasks);document.getElementById('taskInput').value='';renderList('taskList',tasks)}
+renderList('memberList',members);renderList('taskList',tasks);updateSelect()
+
+// Users & leaderboard
+let users=load('usersObj');let currentUser=localStorage.getItem('currentUser');let authMode="login";
+function updateLeaderboard(){const list=document.getElementById('leaderboardList');list.innerHTML='';Object.keys(users).forEach(u=>{const d=document.createElement('div');d.className='user-entry';d.innerHTML=`<span>${u}</span><span>${users[u].points}</span>`;list.appendChild(d)});const info=document.getElementById('currentUserInfo');const logoutBtn=document.getElementById('logoutBtn');if(currentUser){info.textContent="Logged in as "+currentUser;logoutBtn.style.display="block"}else{info.textContent="Not signed in";logoutBtn.style.display="none"}}
+function addPoints(p){if(!currentUser)return;users[currentUser].points=(users[currentUser].points||0)+p;save('usersObj',users);updateLeaderboard()}
+function openAuthModal(){document.getElementById('authModal').style.display='flex'}
+function closeAuthModal(){document.getElementById('authModal').style.display='none'}
+async function handleAuth(){const u=document.getElementById('authUser').value.trim();const p=document.getElementById('authPass').value;const h=await sha256(p);if(!u||!p)return alert("fill fields");if(authMode==="signup"){if(users[u])return alert("user exists");users[u]={pass:h,points:0};save('usersObj',users);currentUser=u;localStorage.setItem('currentUser',u);closeAuthModal()}else{if(!users[u])return alert("no such user");if(users[u].pass!==h)return alert("wrong pass");currentUser=u;localStorage.setItem('currentUser',u);closeAuthModal()}updateLeaderboard()}
+function toggleAuthMode(){authMode=authMode==="login"?"signup":"login";document.getElementById('authTitle').textContent=authMode==="login"?"Login":"Signup"}
+function logout(){currentUser=null;localStorage.removeItem('currentUser');updateLeaderboard()}
+updateLeaderboard()
+
+// Theme dropdown
+const btn=document.getElementById('themeBtn'),dd=document.getElementById('themeDropdown');btn.onclick=()=>dd.classList.toggle('show')
+function setTheme(n){document.body.classList.toggle('light-mode',n==='mint'||n==='rose'||n==='sunset');}
+</script>
+</body>
+</html>
